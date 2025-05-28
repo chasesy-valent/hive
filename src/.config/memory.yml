@@ -1,5 +1,5 @@
 emberwoods_info:
-  persistence_path: "/home/jeaston/Valent/Internal/hive/.data/chroma_db"
+  persistence_path: "/home/jeaston/Valent/Internal/hive/data/chroma_db"
   k: 2
   score_threshold: 0.4
   headers_to_split_on:

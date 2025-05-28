@@ -19,7 +19,7 @@ load_dotenv()
 async def main():
     # prepare memory for RAG agent
     emberwoods_memory = SemanticMemory("emberwoods_info", config_path=".config/memory.yml")
-    # await emberwoods_memory.index("/home/jeaston/Valent/Internal/hive/.data/The Emberwoods", type="directory")
+    # await emberwoods_memory.index("/home/jeaston/Valent/Internal/hive/data/The Emberwoods", type="directory")
 
     # create agents
     agent_factory = AgentFactory()
