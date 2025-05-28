@@ -1,0 +1,13 @@
+emberwoods_info:
+  persistence_path: "/home/jeaston/Valent/Internal/hive/.data/chroma_db"
+  k: 2
+  score_threshold: 0.4
+  headers_to_split_on:
+    - - "#"
+      - "Header 1"
+    - - "##"
+      - "Header 2"
+    - - "###"
+      - "Header 3"
+    - - "####"
+      - "Header 4"

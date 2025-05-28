@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hive"
+version = "1.0.0"
+dependencies = [
+    "autogen-agentchat",  # For core agent and team functionality
+    "autogen-ext[openai,anthropic,azure,ollama,docker]",  # For Azure and model client dependencies
+    "python-dotenv",
+    "chromadb",
+    "langchain-text-splitters",
+]
