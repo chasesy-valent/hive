@@ -1,16 +1,8 @@
 from hive import BaseAgentType
 from autogen_agentchat.agents import AssistantAgent
 from typing_extensions import override
-
-class WeatherAgent(BaseAgentType):
-    @override
-    def generate_with_autogen(self, name, model_client):
-        return AssistantAgent(
-            name=name,
-            system_message=self.config.get('instructions', 'You are a helpful assistant.'),
-            model_client=model_client,
-            tools=[get_weather_data]
-        )
+from typing import List
+from autogen_core.memory import Memory
 
 # tool functions, referenced above
 weather_database = {
@@ -21,10 +13,24 @@ weather_database = {
     "paris": {"temperature": 68, "condition": "Cloudy", "humidity": 70, "wind": "8 mph"},
 }
 
-async def get_weather_data(location: str) -> str:
+class WeatherAgent(BaseAgentType):
+    @override
+    def generate_with_autogen(self, name, model_client, memory: List[Memory]):
+        return AssistantAgent(
+            name=name,
+            system_message=self.config.get('instructions', 'You are a helpful assistant.'),
+            model_client=model_client,
+            memory=memory,
+            tools=[get_weather_data]
+        )
+
+def get_weather_data(location: str) -> str:
     """Simulates retrieving weather data for a given location."""
     if not location:
         return ""
+
+    # useless code to show how to access tool configurations from your config.yml file
+    # weather_configs = self.tool_configs.get('weather', {})
         
     location_key = location.lower()
     if location_key in weather_database:
