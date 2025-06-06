@@ -15,7 +15,7 @@ from typing import List
 from hive.agents import BaseAgentType
 from hive.memory import BaseMemoryType
 
-class Factory:
+class ComponentFactory:
     valid_providers = ["azure", "openai", "foundry", "anthropic", "ollama", "gemini", "openai_assistant_api"]
 
     def __init__(self, agent_config_path: str = ".config/agents.yml", memory_config_path: str = ".config/memory.yml"):

@@ -5,7 +5,7 @@ from .orchestration import *
 from .feedback import *
 
 __all__ = [
-    Factory,
+    ComponentFactory,
     BaseAgentType,
     BaseMemoryType,
     Pipeline,

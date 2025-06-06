@@ -3,7 +3,7 @@ This runner provides various examples of how to use the hive framework.
 Select a main function and replace the asyncio.run(main()) call with it.
 """
 
-from hive import Factory
+from hive import ComponentFactory
 from agents.basic_agent import BasicAgent
 from agents.openai_assistant import OpenAIAssistant
 from agents.tool_agent import WeatherAgent
@@ -30,11 +30,28 @@ async def simple_main():
     This is a simple example of how to use the hive framework to create and run an agent.
     """
     # initialize component factory
-    factory = Factory()
+    factory = ComponentFactory()
 
     # create and run agent on a simple task
     agent = factory.create_agent("poetry_writer", BasicAgent)
     await Console(agent.run_stream(task="Write a poem about interstellar travel."))
+
+    # cleanup
+    await factory.close()
+
+async def index_rag_memory_test():
+    """
+    This is intended to be called before the rag_main function for testing the RAG memory object and its
+    indexing functionality.
+    """
+    # initialize component factory
+    factory = ComponentFactory()
+
+    # load memory (+ index directory into semantic memory, if necessary)
+    emberwoods_memory = factory.load_memory("emberwoods_memory", SemanticMemory)
+    await emberwoods_memory.index_from_source() # only needs to be run once, because we are using persistent storage (i.e. saving the memory to a local file)
+
+    emberwoods_memory.query("What is the name of the shop in Aldor's Shop?")
 
     # cleanup
     await factory.close()
@@ -44,12 +61,10 @@ async def rag_main():
     This is an example of how to use the hive framework to create and run an agent that uses a local vector database for RAG.
     """
     # initialize component factory
-    factory = Factory()
+    factory = ComponentFactory()
 
-    # load memory (+ index directory into semantic memory, if necessary) and add it to the agent
-    emberwoods_memory = factory.load_memory("emberwoods_memory", SemanticMemory)
-    # await emberwoods_memory.index_from_source() # only needs to be run once, because we are using persistent storage (i.e. saving the memory to a local file)
-    
+    # load memory and add it to the agent
+    emberwoods_memory = factory.load_memory("emberwoods_memory", SemanticMemory)    
     rag_agent = factory.create_agent("researcher", BasicAgent, memory=[emberwoods_memory])
     await Console(rag_agent.run_stream(task="Tell me about Aldor's Shop."))
 
@@ -64,7 +79,7 @@ async def multi_agent_main():
     - the WeatherAgent is defined by the tool it has access to, which can search through a (manufactured) DB to get the weather of a specific location.
     """
     # create agents
-    factory = Factory()
+    factory = ComponentFactory()
     tool_agent = factory.create_agent("weather_agent", WeatherAgent)
     poetry_writer = factory.create_agent("poetry_writer", BasicAgent)
 
@@ -92,7 +107,7 @@ async def oai_assistant_main():
     ```
     """
     # create agent
-    factory = Factory()
+    factory = ComponentFactory()
     assistant = factory.create_agent("oai_specialist", OpenAIAssistant)
 
     # run agent
@@ -106,7 +121,7 @@ async def cusom_pipeline_main():
     This is an example of how to use the hive framework to run a custom pipeline.
     """
     # create agents
-    factory = Factory()
+    factory = ComponentFactory()
     
     # create pipeline
     pipeline = PoemWriterPipeline(
@@ -131,11 +146,10 @@ async def nested_pipeline_main():
     - This means that they can be used in a group chat, or as part of a nested pipeline, if you want to control context.
     """
     # create agents
-    factory = Factory()
+    factory = ComponentFactory()
 
     # prepare memory
     emberwoods_memory = factory.load_memory("emberwoods_memory", SemanticMemory)
-    # await emberwoods_memory.index_from_source() # only needs to be run once, because we are using persistent storage (i.e. saving the memory to a local file)
 
     # set up pipeline elements
     researcher = factory.create_agent("researcher", BasicAgent, memory=[emberwoods_memory]) # basic researcher to provide context for the poem writer pipeline
