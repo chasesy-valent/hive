@@ -15,6 +15,8 @@ The repository is organized to separate framework code from your multi-agent imp
 │
 ├── hive/               # Core framework code
 │
+├── data/               # Optional, for storing data and persistent memory
+│
 ├── src/                # Your multi-agent system code
 │   ├── .config/        # Configuration files
 │   │   ├── agents.yml  # Agent parameters and settings
@@ -38,7 +40,12 @@ The repository is organized to separate framework code from your multi-agent imp
    - Provides foundational classes and utilities
    - Should not be modified unless extending the framework itself
 
-2. **Your Implementation (`src/`)**
+2. **Data Storage (`data/`)**
+   - Optional directory for storing persistent data
+   - Used for maintaining memory systems and knowledge bases
+   - Suitable for storing vector databases, conversation logs, and other persistent data
+
+3. **Your Implementation (`src/`)**
    - `.config/`: YAML configurations for your agents and memory systems
      - `agents.yml`: Define agent parameters, models, and settings
      - `memory.yml`: Configure vector stores, chunking, and retrieval settings
@@ -64,7 +71,7 @@ The repository is organized to separate framework code from your multi-agent imp
      - Sets up memory systems
      - Manages the execution flow
 
-3. **Configuration and Environment**
+4. **Configuration and Environment**
    - `.env`: Stores sensitive information like API keys
 
 
