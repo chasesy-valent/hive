@@ -39,6 +39,7 @@ data/*
 .data/*
 *.log
 chroma_db/
+hive-starter/
 
 # Jupyter Notebook
 .ipynb_checkpoints
