@@ -87,7 +87,7 @@ Create a configuration file in `src/.config/agents.yml`:
 
 ```yaml
 my_assistant:
-  client: 
+  llm_config: 
     provider: openai  # Supports: openai, anthropic, azure, ollama, gemini
     model: gpt-4-turbo-preview  # Use your preferred model
   instructions: |
@@ -136,7 +136,7 @@ Create `src/runner.py`:
 
 ```python
 from hive import ComponentFactory
-from rich.console import Console
+from autogen_agentchat.ui import Console
 from agents.basic_agent import BasicAgent
 from dotenv import load_dotenv
 import asyncio
@@ -148,7 +148,7 @@ async def main():
     factory = ComponentFactory()
     
     # Create your agent
-    assistant = factory.create("my_assistant", BasicAgent)
+    assistant = factory.create_agent("my_assistant", BasicAgent)
     
     # Run a conversation with streaming output
     stream = assistant.run_stream(
@@ -186,28 +186,34 @@ Now that you have a basic agent running, you can explore more advanced features:
 1. **Add Memory**: Enhance your agent with semantic (RAG) memory:
 ```python
 # In your runner.py
-memory = factory.create("semantic_memory", MemoryImplementation)  # Configure in memory.yml
-assistant = factory.create("my_assistant", BasicAgent, memory=memory)
+memory = factory.load_memory("semantic_memory", MemoryImplementation)  # Configure in memory.yml
+assistant = factory.create_agent("my_assistant", BasicAgent, memory=memory)
 ```
 
 2. **Create Multi-Agent Teams**: Have multiple agents collaborate:
 ```python
+from autogen_agentchat.teams import RoundRobinGroupChat
 # In your runner.py
-assistant = factory.create("assistant", BasicAgent)
-expert = factory.create("expert", ExpertAgent)
-team = factory.create_team([assistant, expert])
+assistant = factory.create_agent("assistant", BasicAgent)
+expert = factory.create_agent("expert", ExpertAgent)
+team = RoundRobinGroupChat([assistant, expert], max_turns=2)
 ```
 
 3. **Add Custom Tools**: Give your agents new capabilities with tools:
 ```python
 # In your agent implementation
-def create_with_autogen(self, name: str, model_client):
-    return AssistantAgent(
-        name=name,
-        system_message=self.config['instructions'],
-        model_client=model_client,
-        tools=[my_custom_tool]  # Add your tools here
-    )
+class ToolAgent
+    def create_with_autogen(self, name: str, model_client):
+        return AssistantAgent(
+            name=name,
+            system_message=self.config['instructions'],
+            model_client=model_client,
+            tools=[my_custom_tool]  # Add your tools here
+        )
+
+    def my_custom_tool(self, **agent_parameters):
+        # enter code here
+        # use parameters from agent config with self.tool_configs.get('<param>', {})
 ```
 
 *NOTE: full implementations and more in-depth walkthroughs provided in the [HIVE Documentation](.docs/README.md).*
@@ -227,21 +233,24 @@ def create_with_autogen(self, name: str, model_client):
    - `agents.yml`: Configure each agent's parameters
      ```yaml
      expert_agent:
-       client:
+       llm_config:
          provider: openai
          model: gpt-4-turbo-preview
        instructions: |
          You are an expert Python developer...
-       tools:
-         - name: code_analysis
-           enabled: true
+       tool_config:
+         - code_analysis:
+            enabled: true
      ```
    - `memory.yml`: Set up memory systems
      ```yaml
      semantic_memory:
-       vector_store: chromadb
-       chunk_size: 1000
-       overlap: 200
+       source: "./data/The Emberwoods"
+       source_type: "directory" # 'directory', 'files', 'content'
+      chunking_config:
+        # ... used in load_with_langchain() function
+      retrieval_config:
+        # ... used in generate_with_autogen() function
      ```
 
 3. **Iterative Development**
@@ -265,7 +274,7 @@ def create_with_autogen(self, name: str, model_client):
 1. **Agent Development**
    - Keep agent definitions focused and single-purpose
    - Store agent-specific tools in the same file as the agent
-   - Use the factory pattern via `factory.create()` for instantiation
+   - Use the factory pattern via `factory.create_agent()` for instantiation
 
 2. **Memory Management**
    - Test memory systems independently before integration
@@ -302,7 +311,7 @@ Remember: Start simple and add complexity only when needed. Test each component 
      - Episodic conversation history
      - Procedural task memory
    
-   - [Agent Orchestration](.docs/concepts/orchestration.md)
+   - [Agent Workflows](.docs/concepts/orchestration.md)
      - AutoGen teams
      - Custom pipelines
      - Communication patterns
@@ -316,12 +325,6 @@ Remember: Start simple and add complexity only when needed. Test each component 
    
    - Consult the documentation provided in the `hive-starter/README.md`.
    - Feel free to run any of the examples. Assuming your environment is properly set up, you should be able to run `hive-starter/runner.py` just like you would your own runner.py.
-
-**???Advanced Topics???**
-   - [Performance Optimization](.docs/advanced/performance.md)
-   - [Custom Memory Implementations](.docs/advanced/memory.md)
-   - [Complex Workflows](.docs/advanced/workflows.md)
-   - [Testing Strategies](.docs/advanced/testing.md)
 
 ### Getting Help
 
