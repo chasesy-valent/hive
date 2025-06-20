@@ -11,30 +11,25 @@ The agent configuration (in `agents.yml`) defines the agent's capabilities and b
 
 ```yml
 my_assistant:
-  client: 
+  llm_config: 
     provider: openai
     model: gpt-4-turbo-preview
+    temperature: 0.7
   instructions: |
     You are a helpful AI assistant that specializes in Python development.
     Provide clear, concise responses and always include code examples when relevant.
-  constraints:
-    max_iterations: 5
-    timeout_seconds: 300
 ```
 
 **Key Parameters Explained:**
 - `client`: Defines how the agent interacts with LLM services
   - `provider`: Which LLM service to use (affects available models and features)
   - `model`: The specific model to use (impacts capabilities and cost)
+  - `temperature`: Controls randomness in responses (0 = deterministic, 1 = most random)
   
 - `instructions`: The agent's core programming
   - Defines the agent's role and personality
   - Sets boundaries for what the agent can/should do
   - Establishes any specific domain expertise
-  
-- `constraints`: Optional limits on agent behavior
-  - `max_iterations`: Prevents infinite loops in agent reasoning
-  - `timeout_seconds`: Ensures tasks complete within a time limit
 
 ### Agent Types and Their Uses
 
@@ -43,7 +38,7 @@ The foundation for all HIVE agents:
 ```python
 class BasicAgent(BaseAgentType):
     @override
-    def generate_with_autogen(self, name, model_client):
+    def generate_with_autogen(self, name, model_client, memory):
         return AssistantAgent(
             name=name,
             system_message=self.config.get('instructions'),
@@ -58,7 +53,7 @@ class BasicAgent(BaseAgentType):
   - Tool integration framework
   
 - `generate_with_autogen()`: Bridge to AutoGen's agent system
-  - `name`: Unique identifier for the agent
+  - `name`: Unique identifier for the agent, taken from `agents.yml`
   - `model_client`: Configured LLM interface
   - Returns an AutoGen agent instance
 
@@ -68,12 +63,12 @@ Memory gives agents context and learning capabilities:
 ```python
 class AgentWithMemory(BaseAgentType):
     @override
-    def generate_with_autogen(self, name, model_client):
+    def generate_with_autogen(self, name, model_client, memory):
         return AssistantAgent(
             name=name,
             system_message=self.config.get('instructions'),
             model_client=model_client,
-            memory_retriever=self.memory.retrieve if self.memory else None
+            memory=memory
         )
 ```
 
@@ -86,13 +81,18 @@ class AgentWithMemory(BaseAgentType):
   - Records sequences of events
   - Helps agents improve over time
 
+- `ProceduralMemory`: For storing action patterns and skills
+  - Captures learned procedures and workflows
+  - Enables agents to refine and optimize task execution
+  - Useful for repetitive or structured tasks
+
 ### Tool Integration
 Tools extend an agent's capabilities:
 
 ```python
 class WeatherAgent(BaseAgentType):
     @override
-    def generate_with_autogen(self, name, model_client):
+    def generate_with_autogen(self, name, model_client, memory):
         return AssistantAgent(
             name=name,
             system_message=self.config.get('instructions'),
@@ -102,21 +102,24 @@ class WeatherAgent(BaseAgentType):
 
     def get_weather_data(self, city: str) -> str:
         """Get weather data for a specific city."""
-        tool_configs = self.config["weather_tool"]
-        return self._fetch_weather(city, tool_configs)
+        tool_configs = self.tool_configs["weather_tool"]
+        
+        # fetch_weather(city, tool_configs)
+        return weather_details
 ```
 
 **Tool Configuration:**
 ```yaml
 weather_agent:
-  client: 
+  llm_config: 
     provider: openai
     model: gpt-4-turbo-preview
   instructions: You are a helpful assistant that can tell the weather of a queried city.
-  weather_tool:
-    api_key: ${WEATHER_API_KEY}
-    cache_duration: 300  # Cache weather data for 5 minutes
-    units: metric
+  tool_config:
+    weather_tool:
+      api_key: ${WEATHER_API_KEY}
+      cache_duration: 300  # Cache weather data for 5 minutes
+      units: metric
 ```
 
 **Tool Components Explained:**
@@ -130,38 +133,19 @@ weather_agent:
   - Can include API keys, settings, and preferences
   - Should use environment variables for sensitive data
 
-## Specialized Agent Types
+## Specialized AutoGen Agent Types
+*For the most current list of pre-generated AutoGen Agents, review [this link](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/agents.html#other-preset-agents).*
 
 ### AssistantAgent
 Best for: General conversation and task completion
 ```python
 class SpecializedAssistant(BaseAgentType):
     @override
-    def generate_with_autogen(self, name, model_client):
+    def generate_with_autogen(self, name, model_client, memory):
         return AssistantAgent(
             name=name,
             system_message=self.config.get('instructions'),
-            model_client=model_client,
-            human_input_mode="NEVER"  # Prevents asking for human input
-        )
-```
-
-### CodeExecutorAgent
-Best for: Code execution and development tasks
-```python
-class DevAgent(BaseAgentType):
-    @override
-    def generate_with_autogen(self, name, model_client):
-        return CodeExecutorAgent(
-            name=name,
-            system_message=self.config.get('instructions'),
-            model_client=model_client,
-            code_execution_config={
-                "work_dir": "coding",     # Workspace directory
-                "use_docker": True,       # Sandbox code execution
-                "timeout": 30,            # Maximum execution time
-                "last_n_messages": 3      # Context window for code
-            }
+            model_client=model_client
         )
 ```
 
@@ -170,21 +154,33 @@ Best for: Testing and automation
 ```python
 class AutomatedTester(BaseAgentType):
     @override
-    def generate_with_autogen(self, name, model_client):
+    def generate_with_autogen(self, name, model_client, memory):
         return UserProxyAgent(
+            name=name
+        )
+```
+
+### CodeExecutorAgent
+Best for: Code execution and development tasks
+```python
+from autogen_ext.code_executors.docker import DockerCommandLineCodeExecutor
+
+class DevAgent(BaseAgentType):
+    @override
+    def generate_with_autogen(self, name, model_client):
+        code_executor = DockerCommandLineCodeExecutor(work_dir=self.tool_configs.get('work_dir', './'))
+        await code_executor.start()
+
+        return CodeExecutorAgent(
             name=name,
-            human_input_mode="NEVER",
-            max_consecutive_auto_reply=3,  # Prevent infinite loops
-            code_execution_config={
-                "work_dir": "tests",
-                "use_docker": True
-            }
+            code_executor=code_executor
         )
 ```
 
 ## Error Handling and Monitoring
 
 ### Error Recovery
+***Not currently implemented in HIVE, but a great idea. Maybe YOU could be the one to contribute this to HIVE.***
 ```python
 class RobustAgent(BaseAgentType):
     @override
@@ -223,6 +219,7 @@ class RobustAgent(BaseAgentType):
   - Monitor and log slow operations
 
 ## Testing Strategies
+***Not currently implemented in HIVE, but a great idea. Maybe YOU could be the one to contribute this to HIVE.***
 
 ### Unit Testing
 ```python
