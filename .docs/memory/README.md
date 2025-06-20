@@ -8,13 +8,20 @@ Memory in AI agents serves as the bridge between raw computational power and mea
 
 ### Working Memory (Short-Term)
 
-Working memory is the agent's immediate consciousness - the information it's actively processing. Think of it like your mental workspace when solving a problem. In AI agents, this typically includes:
+Working memory in an AI agent is the content of the agent's context window—the complete set of information that is sent to the LLM in a single prompt. This is how the agent "puts everything together": by accumulating all relevant information into one long string (or structured message sequence) that the LLM can process at once.
 
-- The current conversation or task context
-- Recently accessed information
-- Temporary calculations or reasoning steps
+A typical working memory window for an agent includes, in order:
 
-Working memory is limited by the LLM's context window (typically between 4K to 32K tokens), which creates the need for efficient memory management strategies.
+1. **System Message / Instructions**: The agent's core role, rules, and behavioral guidelines.
+2. **Task Description**: The specific task or user request the agent is currently working on.
+3. **Contextual Information**: Any relevant context, such as:
+   - Results from tool calls (e.g., API responses, database lookups)
+   - Retrieved knowledge from semantic or episodic memory
+   - Summaries of previous interactions or important facts
+4. **Conversation History**: The most recent exchanges between the user and the agent, often truncated to fit within the window.
+5. **Temporary Calculations or Reasoning Steps**: Any intermediate results or scratchpad notes needed for the current reasoning process.
+
+All of this information is concatenated (or structured as a list of messages) in a specific order—usually starting with the system message, followed by the task, then context, and finally the most recent conversation turns. The total size of this working memory is limited by the LLM's context window (typically 4K to 32K tokens), so agents must manage what to include and what to omit or summarize to stay within these bounds.
 
 ### Semantic Memory (Knowledge)
 
@@ -112,28 +119,72 @@ Chunking is a fundamental technique for managing large amounts of information in
    - Best for: Formatted documents, code, documentation
    - Challenge: Requires consistent document structure
 
-Here's a simple example of how chunking works in practice:
+**HIVE's Chunking Implementation:**
+
+HIVE implements chunking through the `load_with_langchain()` method in memory classes that extend `BaseMemoryType`. The implementation uses LangChain's `RecursiveCharacterTextSplitter` for intelligent text processing:
 
 ```python
-class SemanticChunker:
-    def chunk_document(self, document: str, chunk_size: int = 512):
-        """
-        Chunks a document while preserving semantic meaning.
-        Demonstrates basic chunking principles.
-        """
-        paragraphs = document.split('\n\n')
-        chunks = []
-        current_chunk = []
-        
-        for paragraph in paragraphs:
-            if self._chunk_size(current_chunk + [paragraph]) <= chunk_size:
-                current_chunk.append(paragraph)
-            else:
-                chunks.append('\n\n'.join(current_chunk))
-                current_chunk = [paragraph]
-                
-        return chunks
+async def load_with_langchain(self, content: List[str], verbose: bool = False):
+    """Process and store content with intelligent chunking."""
+    chunker = RecursiveCharacterTextSplitter(
+        chunk_size=1000,  # Characters per chunk
+        chunk_overlap=200,  # Overlap between chunks
+        length_function=len,
+    )
+
+    for source in content:
+        chunks = chunker.split_text(source)
+        for chunk in chunks:
+            await self.memory.add(MemoryContent(
+                content=chunk,
+                mime_type=MemoryMimeType.TEXT,
+                metadata={"source": source}
+            ))
 ```
+
+**Key Features of HIVE's Chunking:**
+
+1. **LangChain Integration**: Uses `RecursiveCharacterTextSplitter` for intelligent text splitting that preserves semantic meaning
+2. **Configurable Parameters**:
+   - `chunk_size`: Number of characters per chunk (default: 1000)
+   - `chunk_overlap`: Overlap between chunks to maintain context (default: 200)
+   - `length_function`: Function to measure chunk size (default: `len`)
+3. **Metadata Preservation**: Each chunk maintains source information for traceability
+4. **Async Processing**: Handles content loading asynchronously for better performance
+5. **Document Type Support**: Works with various document types including PDFs and text files
+
+**Configuration-Driven Chunking:**
+
+Chunking parameters can be configured through YAML configuration files, allowing customization without code changes:
+
+```yaml
+semantic_memory:
+  source: "./data/documents"
+  source_type: "directory"
+  chunking_config:
+    chunk_size: 1000
+    chunk_overlap: 200
+    length_function: "len"
+```
+
+**Integration with Document Processing:**
+
+The chunking system is integrated into HIVE's document processing pipeline:
+
+```python
+async def _index_documents(self, sources: List[str], verbose: bool = False) -> None:
+    for source in sources:
+        if source.endswith(".pdf"):
+            pdf_loader = PyPDFLoader(source)
+            pages = pdf_loader.load()
+            await self.load_with_langchain([pages], verbose)
+        else:
+            with open(source, "r", encoding="utf-8") as f:
+                content = f.read()
+                await self.load_with_langchain([content], verbose)
+```
+
+This implementation ensures that chunking is applied consistently across different document types while maintaining the semantic integrity of the content.
 
 ### Memory Compression
 
