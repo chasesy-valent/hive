@@ -3,10 +3,10 @@
 ## Overview
 This guide provides instructions for setting up your development environment for the HIVE framework. Follow the steps relevant to your operating system and preferred setup.
 
+*Tip: WSL is really nice for development, and pyenv makes Python versioning and environment management super easy, but you may use Windows + Python installers if you wish.*
+
 ## Prerequisites
 
-- Python 3.10 or higher
-- pyenv (recommended for Python version management)
 - API key from one or more supported LLM providers:
   - OpenAI
   - Anthropic
@@ -90,6 +90,8 @@ pyenv virtualenv 3.10.17 hive
 pyenv local hive
 ```
 
+*You will only need to run `pyenv local hive` once. After that, your system will automatically start the hive environment when you navigate to the project working directory.*
+
 ## HIVE Installation
 
 Install HIVE in development mode:
@@ -110,6 +112,7 @@ OPENAI_API_KEY=your_openai_key_here
 # Optional - Add as needed
 ANTHROPIC_API_KEY=your_anthropic_key_here
 AZURE_OPENAI_KEY=your_azure_key_here
+AZURE_ENDPOINT=your_azure_endpoint_here
 ```
 
 ## Next Steps
