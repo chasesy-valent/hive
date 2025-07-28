@@ -114,7 +114,7 @@ from typing_extensions import override
 
 class BasicAgent(BaseAgentType):
     @override
-    def create_with_autogen(self, name: str, model_client, memory):
+    def generate_with_autogen(self, name: str, model_client, memory):
         """Create an AutoGen assistant with our configuration."""
         return AssistantAgent(
             name=name,
@@ -125,7 +125,7 @@ class BasicAgent(BaseAgentType):
 
 This implementation:
 - Inherits from HIVE's `BaseAgentType`
-- Overrides `create_with_autogen()` to specify how the agent should be created
+- Overrides `generate_with_autogen()` to specify how the agent should be created
 - Uses AutoGen's `AssistantAgent` with our configured instructions
 
 ### 3. Build Your Runner
